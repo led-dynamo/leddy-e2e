@@ -1,0 +1,11 @@
+{
+  "type": "show",
+  "payload": {
+    "id": "e2e-1",
+    "text": "A MESSAGE LONGER THAN THE PHYSICAL BOARD",
+    "speed_pixels_per_second": 24,
+    "direction": "left",
+    "repeat": "forever",
+    "issued_at_unix_ms": 0
+  }
+}
