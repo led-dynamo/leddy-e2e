@@ -1,0 +1,15 @@
+{
+  "type": "hello",
+  "payload": {
+    "device_id": "leddy-esp32s3-lab-01",
+    "firmware_version": "0.2.0",
+    "capabilities": {
+      "max_width": 512,
+      "max_height": 64,
+      "color_depth_bits": 24,
+      "supports_brightness": true,
+      "platform": "esp32",
+      "transports": ["usb_serial", "wifi", "ble"]
+    }
+  }
+}
