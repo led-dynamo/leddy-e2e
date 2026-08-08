@@ -127,13 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     },
                 )
                 .await?;
-                send_telemetry(
-                    &mut writer,
-                    &device_id,
-                    started.elapsed().as_secs(),
-                    None,
-                )
-                .await?;
+                send_telemetry(&mut writer, &device_id, started.elapsed().as_secs(), None).await?;
                 handled += 1;
             }
             DeviceCommand::Configure(next) => {
@@ -193,10 +187,7 @@ where
     .await
 }
 
-async fn send_event<S>(
-    writer: &mut S,
-    event: DeviceEvent,
-) -> Result<(), Box<dyn std::error::Error>>
+async fn send_event<S>(writer: &mut S, event: DeviceEvent) -> Result<(), Box<dyn std::error::Error>>
 where
     S: SinkExt<Message> + Unpin,
     S::Error: std::error::Error + Send + Sync + 'static,
@@ -208,7 +199,10 @@ where
 }
 
 fn emit(value: serde_json::Value) -> io::Result<()> {
-    println!("{}", serde_json::to_string(&value).expect("serialize observation"));
+    println!(
+        "{}",
+        serde_json::to_string(&value).expect("serialize observation")
+    );
     io::stdout().flush()
 }
 
