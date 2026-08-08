@@ -43,6 +43,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_height: config.height,
             color_depth_bits: 1,
             supports_brightness: true,
+            platform: None,
+            transports: Vec::new(),
         },
     };
     writer
