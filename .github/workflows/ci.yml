@@ -14,3 +14,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: npm test
+      - name: Validate canonical Zed dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dependency in \
+            led-dynamo/leddy-clients \
+            led-dynamo/leddy-lib \
+            led-dynamo/leddy-interfaces \
+            led-dynamo/leddy-cli
+          do
+            grep -Fq "\"${dependency}\"" .zpkg.toml
+          done
+          grep -Fq 'dir = ".vendor/.zed"' .zpkg.toml
+          grep -Fq '.vendor/.zed/' .gitignore
