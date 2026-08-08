@@ -9,11 +9,13 @@ permissions:
   contents: read
 
 jobs:
-  node:
+  software-slice:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: npm test
+      - name: Checkout end-to-end suite
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Validate canonical Zed dependencies
         shell: bash
         run: |
@@ -28,3 +30,70 @@ jobs:
           done
           grep -Fq 'dir = ".vendor/.zed"' .zpkg.toml
           grep -Fq '.vendor/.zed/' .gitignore
+
+      - name: Checkout API server under test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: led-dynamo/leddy-api-server.rs
+          ref: main
+          path: api-server
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            api-server
+            virtual-device
+
+      - name: Check virtual device formatting
+        run: cargo fmt --manifest-path virtual-device/Cargo.toml -- --check
+
+      - name: Lint virtual device
+        run: cargo clippy --manifest-path virtual-device/Cargo.toml --all-targets -- -D warnings
+
+      - name: Test virtual device crate
+        run: cargo test --manifest-path virtual-device/Cargo.toml
+
+      - name: Build API server and virtual device
+        run: |
+          cargo build --manifest-path api-server/Cargo.toml
+          cargo build --manifest-path virtual-device/Cargo.toml
+
+      - name: Start API server
+        run: |
+          set -euo pipefail
+          LEDDY_API_ADDR=127.0.0.1:18080 ./api-server/target/debug/leddy-api-server >/tmp/leddy-api.log 2>&1 &
+          echo $! >/tmp/leddy-api.pid
+          for attempt in $(seq 1 100); do
+            if curl --fail --silent http://127.0.0.1:18080/health >/dev/null; then
+              exit 0
+            fi
+            sleep 0.1
+          done
+          cat /tmp/leddy-api.log
+          exit 1
+
+      - name: Run protocol and system tests
+        run: npm test
+        env:
+          LEDDY_API_URL: http://127.0.0.1:18080
+          LEDDY_DEVICE_WS_URL: ws://127.0.0.1:18080/v1/ws/devices
+          LEDDY_VIRTUAL_DEVICE_BIN: ${{ github.workspace }}/virtual-device/target/debug/leddy-virtual-device
+
+      - name: Show API log on failure
+        if: failure()
+        run: cat /tmp/leddy-api.log || true
+
+      - name: Stop API server
+        if: always()
+        run: |
+          if [ -f /tmp/leddy-api.pid ]; then
+            kill "$(cat /tmp/leddy-api.pid)" || true
+          fi
